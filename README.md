@@ -2,8 +2,7 @@
 Empowering UAE SMEs with AI-Driven Automation, IoT Integration, and Seamless Operations
 
 ## 🧩 Overview
-This comprehensive package is designed to digitally enable Small and Medium Enterprises (SMEs) in the **trading and inventory-based sectors**. It brings together **modern UI/UX dashboards**, a **Django-powered intelligent backend**, **IMX500 edge-AI integration**, and an **AI Chatbot** to streamline operations, enhance decision-making, and improve employee-customer-manager experiences.
-
+This comprehensive package is designed to digitally enable Small and Medium Enterprises (SMEs) in the **trading and inventory-based sectors**. It brings together **modern UI/UX dashboards**, a **Django-powered intelligent backend**, **IMX500 edge-AI integration** for quality control, and an **AI Chatbot** to streamline operations, enhance decision-making, and improve employee-customer-manager experiences,automates inventory, accounting, and supply chain tasks, and connects seamlessly to existing ERP systems via custom APIs.
 ---
 
 ## 📦 Package Structure
@@ -74,7 +73,7 @@ An AI Assistant embedded across dashboards to support all roles:
   - “Where do I deliver next?”  
   - “Show today’s task list”
 
-**Built with:** OpenAI API (or Dialogflow alternative), context-aware NLP logic, and fallback handling.
+**Built with:** DeepseekAI API (or Dialogflow alternative), context-aware NLP logic, and fallback handling.
 
 ---
 
@@ -97,19 +96,9 @@ An AI Assistant embedded across dashboards to support all roles:
 - **Backend:** Django, Django REST Framework
 - **Database:** PostgreSQL
 - **IoT/AI:** IMX500, OpenCV, Edge AI Models (YOLOv5, MobileNet)
-- **Chatbot:** OpenAI API / Dialogflow / Rasa
+- **Chatbot:** DeepseekAI API / Dialogflow / Rasa
 - **Deployment:** Docker, Nginx, Gunicorn (for production setup)
 
 ---
 
-## 🔧 Setup Instructions (Developer)
 
-1. **Backend:**
-   ```bash
-   cd backend
-   python3 -m venv venv
-   source venv/bin/activate
-   pip install -r requirements.txt
-   python manage.py runserver
-    ```
-  
