@@ -4,6 +4,9 @@ import requests
 import json
 import cv2
 import numpy as np
+import uuid
+import socket
+import threading
 from picamera2 import MappedArray, Picamera2
 from picamera2.devices.imx500 import IMX500
 from pyzbar.pyzbar import decode, ZBarSymbol
@@ -18,20 +21,29 @@ SCAN_DELAY = 5  # Delay (in seconds) between consecutive scans
 ANOMALY_THRESHOLD = 10  # Time in seconds to detect anomaly if no QR detected
 
 # MQTT Configuration
-MQTT_BROKER = "mqtt.eclipseprojects.io"
+MQTT_BROKER = "broker.emqx.io"  # Updated broker to match heartbeat code
 MQTT_PORT = 1883
-MQTT_TOPIC = "manufacturing/anomalies"  # Updated to match React app
+MQTT_TOPIC = "manufacturing/anomalies"  # Topic for QR anomaly messages
+PRESENCE_TOPIC = "device/raspberry-pi/presence/raspberrypi"  # Unique subtopic for Raspberry Pi presence
+
+# Get Pi's hostname and IP to include in heartbeat messages
+hostname = socket.gethostname()
+ip_address = socket.gethostbyname(hostname)
+# Generate a unique client ID
+client_id = f'raspberry-pi-{uuid.uuid4().hex[:8]}'
 
 # Initialize MQTT client
-mqtt_client = mqtt.Client()
+mqtt_client = mqtt.Client(client_id=client_id)
 
-# Update the MQTT callbacks to publish connection status
+# MQTT callbacks
 def on_connect(client, userdata, flags, rc):
     global mqtt_connected
     if rc == 0:
         mqtt_connected = True
         print(f"[✅] Connected to MQTT broker: {MQTT_BROKER}")
-        mqtt_client.publish(MQTT_TOPIC, json.dumps({"status": "connected"}))  # Publish connection status
+        # Send immediate presence notification
+        send_heartbeat()
+        # Subscribe to topics if needed
     else:
         mqtt_connected = False
         print(f"[❌] Failed to connect to MQTT broker, return code: {rc}")
@@ -40,16 +52,59 @@ def on_disconnect(client, userdata, rc):
     global mqtt_connected
     mqtt_connected = False
     print(f"[⚠] Disconnected from MQTT broker, return code: {rc}")
-    mqtt_client.publish(MQTT_TOPIC, json.dumps({"status": "disconnected"}))  # Publish disconnection status
 
+def on_message(client, userdata, msg):
+    print(f"[📩] Received message on topic {msg.topic}: {msg.payload.decode()}")
 
 mqtt_client.on_connect = on_connect
 mqtt_client.on_disconnect = on_disconnect
+mqtt_client.on_message = on_message
+
+# Create heartbeat payload with device details
+def create_heartbeat_payload():
+    return json.dumps({
+        "client_id": client_id,
+        "hostname": hostname,
+        "ip_address": ip_address,
+        "timestamp": int(time.time()),
+        "status": "online"
+    })
+
+# Send heartbeat message
+def send_heartbeat():
+    payload = create_heartbeat_payload()
+    # Using retain=True so new clients will immediately know Raspberry Pi status
+    result = mqtt_client.publish(PRESENCE_TOPIC, payload=payload, qos=1, retain=True)
+    if result.rc == mqtt.MQTT_ERR_SUCCESS:
+        print(f"[❤] Heartbeat sent successfully at {time.strftime('%H:%M:%S')}")
+    else:
+        print(f"[❌] Failed to send heartbeat: {result.rc}")
+
+# Heartbeat loop
+def heartbeat_loop():
+    while True:
+        if mqtt_client.is_connected():
+            send_heartbeat()
+        else:
+            print("[⚠] Not connected, skipping heartbeat")
+        time.sleep(15)  # Send heartbeat every 15 seconds
+
+# Set up last will testament so broker announces when we disconnect
+will_payload = json.dumps({
+    "client_id": client_id,
+    "hostname": hostname,
+    "status": "offline",
+    "timestamp": int(time.time())
+})
 
 mqtt_connected = False
 try:
+    mqtt_client.will_set(PRESENCE_TOPIC, payload=will_payload, qos=1, retain=True)
     mqtt_client.connect(MQTT_BROKER, MQTT_PORT, 60)
     mqtt_client.loop_start()
+    # Start the heartbeat sending loop in a separate thread
+    heartbeat_thread = threading.Thread(target=heartbeat_loop, daemon=True)
+    heartbeat_thread.start()
 except Exception as e:
     print(f"[❌] MQTT Connection Failed: {e}")
 
@@ -154,24 +209,35 @@ if __name__ == "__main__":
 
     print("[🚀] Camera and model initialized. Scanning for QR codes...")
 
-    # Update the anomaly detection section to publish anomalies
-    while True:
-        time.sleep(2.0)
+    try:
+        while True:
+            time.sleep(2.0)
 
-    # Anomaly Detection: Check if no QR code detected for more than ANOMALY_THRESHOLD seconds
-        current_time = time.time()
-        if current_time - last_qr_detected_time > ANOMALY_THRESHOLD:
-           anomaly_message = "anomaly detected: no qr code detected for over 10 seconds!"
-           print(f"[⚠] {anomaly_message}")
-        
-        # Publish anomaly message to MQTT if not published recently
-           if current_time - last_anomaly_published > ANOMALY_THRESHOLD:  # Avoid flooding
-              if mqtt_connected:
-                try:
-                    print(f"[📡] Publishing Anomaly via MQTT: {anomaly_message}")
-                    mqtt_client.publish(MQTT_TOPIC, json.dumps({"anomaly": anomaly_message}))
-                    last_anomaly_published = current_time
-                except Exception as e:
-                    print(f"[⚠] MQTT Error: {e}")
-           last_qr_detected_time = current_time  # Reset to avoid repeated messages  
-
+            # Anomaly Detection: Check if no QR code detected for more than ANOMALY_THRESHOLD seconds
+            current_time = time.time()
+            if current_time - last_qr_detected_time > ANOMALY_THRESHOLD:
+                anomaly_message = "anomaly detected: no qr code detected for over 10 seconds!"
+                print(f"[⚠] {anomaly_message}")
+                
+                # Publish anomaly message to MQTT if not published recently
+                if current_time - last_anomaly_published > ANOMALY_THRESHOLD:  # Avoid flooding
+                    if mqtt_connected:
+                        try:
+                            print(f"[📡] Publishing Anomaly via MQTT: {anomaly_message}")
+                            mqtt_client.publish(MQTT_TOPIC, anomaly_message)
+                            last_anomaly_published = current_time
+                        except Exception as e:
+                            print(f"[⚠] MQTT Error: {e}")
+                last_qr_detected_time = current_time  # Reset to avoid repeated messages
+    except KeyboardInterrupt:
+        print("[🛑] Shutting down...")
+        # Send an offline message before disconnecting
+        offline_payload = json.dumps({
+            "client_id": client_id,
+            "hostname": hostname,
+            "status": "offline",
+            "timestamp": int(time.time())
+        })
+        mqtt_client.publish(PRESENCE_TOPIC, payload=offline_payload, qos=1, retain=True)
+        mqtt_client.loop_stop()
+        mqtt_client.disconnect()
