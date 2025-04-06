@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Chrome } from "lucide-react";
-
+import Link from "next/link";
 export function LoginForm({
   className,
   ...props
@@ -144,12 +144,12 @@ export function LoginForm({
             </div>
             <div className="mt-4 text-center text-sm">
               Don&apos;t have an account?{" "}
-              <a
-                href="#"
+              <Link
+                href="/authentication/signup"
                 className="text-blue-400 underline underline-offset-4"
               >
                 Sign up
-              </a>
+              </Link>
             </div>
           </form>
         </CardContent>

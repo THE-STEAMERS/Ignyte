@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from .models import Product, Category, Retailer, Order,  Employee, Truck, Shipment
 
+from django.contrib.auth.models import User, Group
+
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
@@ -68,3 +70,31 @@ class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = ['category_id', 'name', 'product_count']
+
+
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    group_name = serializers.CharField(write_only=True)  # Accept group name during registration
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password', 'group_name']
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }
+
+    def create(self, validated_data):
+        group_name = validated_data.pop('group_name', None)
+        password = validated_data.pop('password')
+        user = User(**validated_data)
+        user.set_password(password)
+        user.save()
+
+        # Assign the user to the specified group
+        if group_name:
+            try:
+                group = Group.objects.get(name=group_name)
+                user.groups.add(group)
+            except Group.DoesNotExist:
+                raise serializers.ValidationError({"group_name": "Group does not exist."})
+
+        return user

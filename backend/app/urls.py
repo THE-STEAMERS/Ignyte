@@ -3,7 +3,8 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework.urlpatterns import format_suffix_patterns  # ✅ For better API format handling
 from .views import (
     CustomAuthToken, get_employee_id,logout_view, get_employees, get_retailers,get_counts,
-    get_orders,get_users,get_employee_orders,recent_actions,get_employee_shipments,update_shipment_status,get_logged_in_user,allocate_orders, get_trucks, get_shipments,get_stock_data,category_stock_data,store_qr_code
+    get_orders,get_users,get_employee_orders,recent_actions,get_employee_shipments,update_shipment_status,get_logged_in_user,allocate_orders, get_trucks, get_shipments,get_stock_data,category_stock_data,store_qr_code,
+    save_odoo_credentials,register_user, get_available_groups
 )
 
 urlpatterns = [
@@ -32,7 +33,12 @@ urlpatterns = [
     path('employee_orders/', get_employee_orders, name='get_employee_orders'),
     path('recent_actions/', recent_actions, name='recent_actions'),
     path('employee_id/', get_employee_id, name='get_employee_id'),
+    path('odoo/save-credentials/', save_odoo_credentials, name='save_odoo_credentials'),
+    path('register/', register_user, name='register_user'),
+    path('groups/', get_available_groups, name='get_available_groups'),
 ]
 
 # ✅ Support API requests with format suffixes (e.g., /orders.json, /orders.xml)
 urlpatterns = format_suffix_patterns(urlpatterns, allowed=["json", "html"])
+
+

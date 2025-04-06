@@ -2,8 +2,9 @@ from django.db.models.signals import post_save, post_delete, pre_save
 from django.db.models import F
 from django.dispatch import receiver
 from django.contrib.auth.models import User, Group
-from .models import Order, Product, Shipment, Truck, Employee
+from .models import Order, Product, Shipment, Truck, Employee,OdooCredentials
 
+from .odoo_connector import add_product_to_odoo, authenticate_with_odoo
 
 # ===================== EMPLOYEE SIGNAL =====================
 
@@ -110,3 +111,39 @@ def update_truck_availability_on_shipment(sender, instance, created, **kwargs):
         product = instance.order.product
         product.update_status()
         product.save(update_fields=["total_required_quantity", "total_shipped", "status"])
+
+
+
+
+@receiver(post_save, sender=Product)
+def sync_product_to_odoo(sender, instance, created, **kwargs):
+    """Sync product to Odoo when a new product is created."""
+    if created:
+        try:
+            # Get the Odoo credentials for the user who created the product
+            user = instance.created_by
+            if not user:
+                print("No user associated with the product. Skipping Odoo sync.")
+                return
+
+            credentials = OdooCredentials.objects.get(user=user)
+
+            # Authenticate with Odoo
+            uid, models = authenticate_with_odoo(credentials.db, credentials.username, credentials.password)
+
+            # Add product to Odoo
+            product_id = add_product_to_odoo(
+                uid=uid,
+                models=models,
+                db=credentials.db,
+                password=credentials.password,
+                name=instance.name,
+                price=instance.price,
+                quantity=instance.available_quantity
+            )
+
+            print(f"Product synced to Odoo with ID: {product_id}")
+        except OdooCredentials.DoesNotExist:
+            print(f"No Odoo credentials found for user {user.username}.")
+        except Exception as e:
+            print(f"Failed to sync product to Odoo: {e}")

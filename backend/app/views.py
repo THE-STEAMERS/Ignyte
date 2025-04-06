@@ -3,25 +3,28 @@ import logging
 from django.db import transaction
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated,IsAdminUser
+from rest_framework.permissions import IsAuthenticated,IsAdminUser,AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
 from django.db.models import Count
-from .models import Employee, Retailer, Order, Truck, Shipment, Product, Category
+from .models import Employee, Retailer, Order, Truck, Shipment, Product, Category,OdooCredentials
 from .serializers import (
     EmployeeSerializer, RetailerSerializer, 
-    OrderSerializer, ProductSerializer, TruckSerializer, ShipmentSerializer, CategorySerializer
+    OrderSerializer, ProductSerializer, TruckSerializer, ShipmentSerializer, CategorySerializer,UserRegistrationSerializer
 )
 from .allocation import allocate_shipments
 from django.db.models import F
 from django.shortcuts import redirect
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User,Group
 from django.http import JsonResponse
 from .permissions import IsEmployeeUser
 from django.contrib.admin.models import LogEntry;
 from django.contrib.admin.models import LogEntry
+
+
+from .odoo_connector import authenticate_with_odoo, add_product_to_odoo
 
 # ✅ Custom Pagination Class
 class StandardPagination(PageNumberPagination):
@@ -421,3 +424,70 @@ def recent_actions(request):
     ]
 
     return Response({'recent_actions': recent_actions_list})
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def save_odoo_credentials(request):
+    """
+    API to save Odoo credentials for the authenticated user.
+    Expects 'db', 'username', and 'password' in the request data.
+    """
+    user = request.user
+    db = request.data.get('db')
+    username = request.data.get('username')
+    password = request.data.get('password')
+
+    if not all([db, username, password]):
+        return Response({"error": "All fields are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Save or update the credentials
+    credentials, created = OdooCredentials.objects.update_or_create(
+        user=user,
+        defaults={"db": db, "username": username, "password": password}
+    )
+
+    return Response({"message": "Odoo credentials saved successfully."}, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_product(request):
+    """
+    API to create a new product.
+    """
+    user = request.user
+    data = request.data
+
+    product = Product.objects.create(
+        name=data.get('name'),
+        category_id=data.get('category_id'),
+        available_quantity=data.get('available_quantity'),
+        price=data.get('price'),
+        created_by=user  # Set the user who created the product
+    )
+
+    return Response({"message": "Product created successfully.", "product_id": product.product_id}, status=status.HTTP_201_CREATED)
+
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])  # Allow anyone to access this endpoint
+def register_user(request):
+    """
+    API to register a new user and assign them to a group.
+    """
+    serializer = UserRegistrationSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({"message": "User registered successfully."}, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])  # Allow anyone to access this endpoint
+def get_available_groups(request):
+    """
+    API to fetch all available groups.
+    """
+    groups = Group.objects.all().values_list('name', flat=True)
+    return Response({"groups": list(groups)}, status=status.HTTP_200_OK)

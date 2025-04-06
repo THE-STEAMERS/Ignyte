@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.models import User
-from .models import Category, Product, Retailer, Order, Employee, Truck, Shipment
+from .models import Category, Product, Retailer, Order, Employee, Truck, Shipment,OdooCredentials
 
 # ✅ Category Admin
 @admin.register(Category)
@@ -57,3 +57,8 @@ class ShipmentAdmin(admin.ModelAdmin):
     list_display = ('shipment_id', 'order', 'employee', 'status', 'shipment_date')  # Changed 'id' to 'shipment_id'
     search_fields = ('order__order_id', 'employee__user__username')  # Fetch employee name properly
     list_filter = ('status', 'shipment_date')
+
+@admin.register(OdooCredentials)
+class OdooCredentialsAdmin(admin.ModelAdmin):
+    list_display = ('user', 'db', 'username')  # Fields to display in the admin list view
+    search_fields = ('user__username', 'db', 'username')  

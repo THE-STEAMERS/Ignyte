@@ -18,7 +18,7 @@ class Category(models.Model):
         """
         return cls.objects.annotate(product_count=Count('products'))
 
-
+"""
 class Product(models.Model):
     product_id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255)
@@ -35,7 +35,7 @@ class Product(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='sufficient')
 
     def update_status(self):
-        """Update the status based on available and required quantity."""
+        "Update the status based on available and required quantity."
         available = self.available_quantity if isinstance(self.available_quantity, int) else 0
         required = self.total_required_quantity if isinstance(self.total_required_quantity, int) else 0
 
@@ -47,8 +47,35 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+"""
+class Product(models.Model):
+    product_id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=255)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="products")
+    available_quantity = models.PositiveIntegerField()
+    total_shipped = models.PositiveIntegerField(default=0)
+    total_required_quantity = models.PositiveIntegerField(default=0)
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="products")  # New field
 
+    STATUS_CHOICES = [
+        ('on_demand', 'On Demand'),
+        ('sufficient', 'Sufficient')
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='sufficient')
 
+    def update_status(self):
+        """Update the status based on available and required quantity."""
+        available = self.available_quantity if isinstance(self.available_quantity, int) else 0
+        required = self.total_required_quantity if isinstance(self.total_required_quantity, int) else 0
+        self.status = 'sufficient' if available > required else 'on_demand'
+
+    def save(self, *args, **kwargs):
+        self.update_status()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
 
 class Retailer(models.Model):
     retailer_id = models.AutoField(primary_key=True)
@@ -138,3 +165,13 @@ class Shipment(models.Model):
     def __str__(self):
         truck_license_plate = getattr(self.employee.truck, 'license_plate', 'No Truck Assigned')
         return f"Shipment {self.shipment_id} - {truck_license_plate}"
+
+
+class OdooCredentials(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="odoo_credentials")
+    db = models.CharField(max_length=255)
+    username = models.CharField(max_length=255)
+    password = models.CharField(max_length=255)
+
+    def __str__(self):
+        return f"Odoo Credentials for {self.user.username}"
