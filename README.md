@@ -58,7 +58,7 @@ An AI-powered edge system using the **Sony IMX500 sensor** for vision-based inte
 
 ---
 
-### 4. 🤖 AI Chatbot Package
+### 4. 🤖 AI Chatbot Package (Under development)
 An AI Assistant embedded across dashboards to support all roles:
 
 - **Manager View:**
@@ -73,7 +73,7 @@ An AI Assistant embedded across dashboards to support all roles:
   - “Where do I deliver next?”  
   - “Show today’s task list”
 
-**Built with:** DeepseekAI API (or Dialogflow alternative), context-aware NLP logic, and fallback handling.
+**Built with:** Rasa.
 
 ---
 
