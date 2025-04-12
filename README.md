@@ -77,4 +77,5 @@ An AI Assistant embedded across dashboards to support all roles:
 
 > **Note:** Setup guides have been added to their respective directories:
 > - Frontend setup guide is available in `frontend/setup.md`
+> - Backend setup guide is available in `backend/setup_guide.md`
 > - IoT Edge AI setup guide is available in `iot_edge_ai/setup.md`
