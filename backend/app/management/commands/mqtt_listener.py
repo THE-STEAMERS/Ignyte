@@ -19,8 +19,8 @@ class Command(BaseCommand):
         QR_TOPIC = "manufacturing/anomalies"
         BACKEND_URL = "http://127.0.0.1:8000/api/store_qr/"  # Update if needed
         AUTH_URL = "http://127.0.0.1:8000/api/token/"  # Authentication endpoint
-        USERNAME = "venkatesh"
-        PASSWORD = "venkat*2005"
+        USERNAME = "your superuser name"
+        PASSWORD = "your password"
 
         def get_unique_client_id():
             """Generate a unique client ID for the device"""
