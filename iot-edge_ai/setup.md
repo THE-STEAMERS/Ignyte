@@ -26,14 +26,14 @@ Welcome to the **Edge AI Inventory Vision System**. This guide walks you through
 - (Optional for SSH) Enable SSH by adding a blank file named `ssh` (no extension) to the `/boot` partition of the SD card
 - Insert SD card into Raspberry Pi and power it up
 
-### 2. Connect to Pi
+## 2. Connect to Pi
 - If using a monitor, proceed directly on the terminal
 - If using SSH:
   ```bash
   ssh pi@<raspberrypi_ip_address>
   # default password: raspberry
 
-### 3. Initial Configuration
+## 3. Initial Configuration
 - Run:
   ```bash
   sudo raspi-config
@@ -48,7 +48,7 @@ Welcome to the **Edge AI Inventory Vision System**. This guide walks you through
   ```bash
   sudo reboot
 
-###📸 IMX500 Camera Setup
+## 📸 IMX500 Camera Setup
 
 - Connect the IMX500 to the Raspberry Pi's camera interface
 - Ensure the flat flex cable is firmly and correctly inserted
@@ -56,27 +56,25 @@ Welcome to the **Edge AI Inventory Vision System**. This guide walks you through
 - ⚠️ Ensure correct voltage levels and secure physical connections to avoid hardware damage
 - Use Sony's runtime tools or vendor SDK to deploy your AI model on the camera.
 
-###🐍 Python Dependencies
+## 🐍 Python Dependencies
 - Update system and install required packages:
   ```bash
   sudo apt update
   sudo apt install imx500-tools 
-  sudo apt install python3-opencv python3-munkres python3-picamera2
-  pip3 install paho-mqtt
+  sudo apt install python3-opencv python3-munkres python3-picamera2 python3-pil python3-numpy libzbar0 python3-pyzbar python3-requests python3-paho-mqtt
 
-###🌐 MQTT Configuration
+## 🌐 MQTT Configuration
 - Set up an MQTT broker:
 
 - Locally (e.g., install Mosquitto)
 - Or use a cloud-based broker like HiveMQ or Adafruit IO
 
-- In backend/mqtt_listener.py, configure:
-  ```bash
-  BROKER_ADDRESS = "your_broker_ip"
-  PORT = 1883
-  TOPIC = "camera/qr"
+- In backend/app/management/commands/mqtt_listener.py, configure:
+   - USERNAME = "your superuser name"
+   - PASSWORD = "your password"
 
-- The IMX500 will publish QR code and anomaly detection events to this topic.
+- The IMX500 will publish QR code and anomaly detection events.
+  
 📂 **Project Structure (Overview)**
   ```bash
   iot-edge_ai/
@@ -89,29 +87,31 @@ Welcome to the **Edge AI Inventory Vision System**. This guide walks you through
   │   └── QRScannerContext.tsx    # React QR UI with MQTT
   │
   ├── model/
-  │   └── inventory_model.tflite  # Your AI model for camera  
+  │   └── network.rpk             # Your AI model for camera  
   │
   └── setup.md                    # This setup file
-
-###▶️ How to Run the Project
-- 1. Start MQTT Broker (if local)
-  ```bash
-  sudo systemctl start mosquitto
-- Or run manually:
-  ```bash
-  mosquitto
+```
+## ▶️ How to Run the Model
+- 1. The rpk file of the model is already created so you can directly run the model in the camera
+     For QRDetection model navigate to the folder in rasperry pi os terminal and give the following command
+     ```bash
+     python app.py --model network.rpk
+     ```
+     For Damage Detection Model the model runs on cloud so u can directly start the program
+     ```bash
+     python app.py
 - 2. Start Backend Listener
-  ```bash
-  cd backend
-  python3 mqtt_listener.py
+     ```bash
+     cd backend
+     python3 mqtt_listener.py
 - 3. Launch Frontend 
-  ```bash
-  cd frontend
-  npm install
-  npm run dev
+     ```bash
+     cd frontend
+     npm install
+     npm run dev
 - Ensure the frontend is configured to subscribe to the same MQTT topic and broker address.
 
-###✅ Final Checks
+## ✅ Final Checks
 - Indicate it's powered and active
 - Run a test QR code scan
 - Check:
