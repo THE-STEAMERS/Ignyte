@@ -102,9 +102,11 @@ Welcome to the **Edge AI Inventory Vision System**. This guide walks you through
      python app.py
 - 2. Start Backend Listener
      ```bash
-     cd backend
-     python3 mqtt_listener.py
-- 3. Launch Frontend 
+     cd backend/app/management/commands
+     python mqtt_listener.py
+- 3. Start backend server    
+     Refer setup_guide.md in backend folder
+- 4. Launch Frontend 
      ```bash
      cd frontend
      npm install
